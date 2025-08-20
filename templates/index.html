@@ -1,9 +1,10 @@
+<!-- File: templates/index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bitcoin Transaction Explorer</title>
+    <title>Enhanced Bitcoin Transaction Explorer</title>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <style>
         body {
@@ -16,7 +17,7 @@
         }
         
         .container {
-            max-width: 1400px;
+            max-width: 1600px;
             margin: 0 auto;
             background: white;
             border-radius: 15px;
@@ -33,13 +34,14 @@
         
         .header h1 {
             margin: 0;
-            font-size: 2.5em;
+            font-size: 2.8em;
             font-weight: 300;
         }
         
         .header p {
             margin: 10px 0 0 0;
             opacity: 0.9;
+            font-size: 1.1em;
         }
         
         .input-section {
@@ -51,12 +53,14 @@
         .input-group {
             display: flex;
             gap: 15px;
-            max-width: 800px;
+            max-width: 1000px;
             margin: 0 auto;
+            flex-wrap: wrap;
         }
         
         #address-input {
             flex: 1;
+            min-width: 300px;
             padding: 15px 20px;
             border: 2px solid #ddd;
             border-radius: 10px;
@@ -70,7 +74,21 @@
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
         
-        #explore-btn {
+        .control-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        #time-filter {
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 16px;
+            background: white;
+        }
+        
+        #explore-btn, #advanced-btn {
             padding: 15px 30px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -82,12 +100,16 @@
             transition: all 0.3s ease;
         }
         
-        #explore-btn:hover {
+        #advanced-btn {
+            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+        }
+        
+        #explore-btn:hover, #advanced-btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
         }
         
-        #explore-btn:disabled {
+        #explore-btn:disabled, #advanced-btn:disabled {
             opacity: 0.6;
             cursor: not-allowed;
             transform: none;
@@ -95,13 +117,44 @@
         
         .main-content {
             display: flex;
-            min-height: 600px;
+            min-height: 700px;
         }
         
         .graph-container {
-            flex: 2;
+            flex: 2.5;
             padding: 20px;
             background: white;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .controls-bar {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .control-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .control-item label {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .control-item select, .control-item input {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
         }
         
         .details-panel {
@@ -113,6 +166,36 @@
             max-height: 800px;
         }
         
+        .address-stats {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 1.4em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+        
         .transaction-card {
             background: white;
             border-radius: 10px;
@@ -120,6 +203,12 @@
             margin-bottom: 15px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
             border-left: 4px solid #667eea;
+            transition: all 0.3s ease;
+        }
+        
+        .transaction-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
         }
         
         .transaction-card.positive {
@@ -130,27 +219,64 @@
             border-left-color: #e74c3c;
         }
         
-        .transaction-amount {
-            font-size: 1.2em;
-            font-weight: bold;
-            margin-bottom: 5px;
+        .transaction-card.high-risk {
+            border-left-color: #ff4757;
+            background: #fff5f5;
         }
         
-        .positive { color: #2ecc71; }
-        .negative { color: #e74c3c; }
-        
-        .transaction-time {
-            color: #666;
-            font-size: 0.9em;
+        .transaction-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 10px;
         }
         
-        .transaction-id {
-            font-family: 'Courier New', monospace;
-            font-size: 0.8em;
-            color: #999;
-            word-break: break-all;
+        .transaction-amount {
+            font-size: 1.2em;
+            font-weight: bold;
         }
+        
+        .risk-indicator {
+            display: flex;
+            gap: 2px;
+        }
+        
+        .risk-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ddd;
+        }
+        
+        .risk-dot.active {
+            background: #ff4757;
+        }
+        
+        .transaction-meta {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin: 10px 0;
+            font-size: 0.9em;
+            color: #666;
+        }
+        
+        .category-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: 600;
+            margin-top: 5px;
+        }
+        
+        .category-standard { background: #e3f2fd; color: #1976d2; }
+        .category-exchange_batch { background: #fff3e0; color: #f57c00; }
+        .category-mixing_suspicious { background: #ffebee; color: #d32f2f; }
+        .category-simple_payment { background: #e8f5e8; color: #388e3c; }
+        
+        .positive { color: #2ecc71; }
+        .negative { color: #e74c3c; }
         
         .loading {
             text-align: center;
@@ -167,23 +293,13 @@
             border: 1px solid #fcc;
         }
         
-        .current-address {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            word-break: break-all;
-            font-family: 'Courier New', monospace;
-        }
-        
         .legend {
             display: flex;
-            gap: 20px;
+            gap: 15px;
             justify-content: center;
             margin-bottom: 20px;
             flex-wrap: wrap;
-            background: rgba(248,249,250,0.8);
+            background: rgba(248,249,250,0.9);
             padding: 15px;
             border-radius: 10px;
             border: 1px solid #e9ecef;
@@ -193,16 +309,16 @@
             display: flex;
             align-items: center;
             gap: 8px;
-            font-size: 14px;
-            padding: 5px 10px;
+            font-size: 13px;
+            padding: 6px 12px;
             background: white;
-            border-radius: 6px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
         }
         
         .legend-color {
-            width: 15px;
-            height: 15px;
+            width: 12px;
+            height: 12px;
             border-radius: 50%;
             border: 2px solid white;
         }
@@ -211,16 +327,7 @@
         .legend-input { background: #2ecc71; }
         .legend-output { background: #e74c3c; }
         
-        .legend-line {
-            width: 30px;
-            height: 4px;
-            border-radius: 2px;
-        }
-        
-        .legend-incoming { background: #2ecc71; }
-        .legend-outgoing { background: #e74c3c; }
-        
-        .recent-transactions {
+        .analysis-panel {
             background: white;
             border-radius: 10px;
             padding: 20px;
@@ -228,7 +335,7 @@
             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
         }
         
-        .recent-transactions h4 {
+        .analysis-panel h4 {
             margin: 0 0 15px 0;
             color: #2c3e50;
             display: flex;
@@ -236,68 +343,118 @@
             gap: 10px;
         }
         
-        .transaction-summary {
+        .quick-stats {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 15px;
             margin-bottom: 20px;
         }
         
-        .summary-item {
+        .quick-stat {
             background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
             padding: 15px;
             border-radius: 8px;
             text-align: center;
         }
         
-        .summary-value {
-            font-size: 1.4em;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-        
-        .summary-label {
-            color: #666;
-            font-size: 0.9em;
-        }
-        
-        .address-info {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 15px;
-            border-radius: 10px;
+        .timeline-controls {
+            display: flex;
+            gap: 10px;
             margin-bottom: 15px;
-            word-break: break-all;
-            font-family: 'Courier New', monospace;
-            text-align: center;
+            flex-wrap: wrap;
         }
         
-        .address-info strong {
-            display: block;
-            margin-bottom: 8px;
-            font-family: 'Segoe UI', sans-serif;
+        .timeline-btn {
+            padding: 8px 16px;
+            border: 1px solid #ddd;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .timeline-btn:hover, .timeline-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        
+        @media (max-width: 768px) {
+            .main-content {
+                flex-direction: column;
+            }
+            
+            .input-group {
+                flex-direction: column;
+            }
+            
+            .control-group {
+                flex-direction: column;
+                width: 100%;
+            }
+            
+            #address-input {
+                min-width: unset;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🔗 Bitcoin Transaction Explorer</h1>
-            <p>Explore Bitcoin addresses and their transaction networks interactively</p>
+            <h1>🔗 Enhanced Bitcoin Explorer</h1>
+            <p>Advanced transaction analysis with risk scoring and pattern detection</p>
         </div>
         
         <div class="input-section">
             <div class="input-group">
                 <input type="text" 
                        id="address-input" 
-                       placeholder="Enter Bitcoin address"
+                       placeholder="Enter Bitcoin address for enhanced analysis"
                        value="">
-                <button id="explore-btn" onclick="exploreAddress()">Explore</button>
+                
+                <div class="control-group">
+                    <select id="time-filter">
+                        <option value="">All time</option>
+                        <option value="7">Last 7 days</option>
+                        <option value="30">Last 30 days</option>
+                        <option value="90">Last 90 days</option>
+                        <option value="365">Last year</option>
+                    </select>
+                    
+                    <button id="explore-btn" onclick="exploreAddress()">Explore</button>
+                    <button id="advanced-btn" onclick="showAdvancedAnalysis()">Deep Analysis</button>
+                </div>
             </div>
         </div>
         
         <div class="main-content">
             <div class="graph-container">
+                <div class="controls-bar">
+                    <div class="control-item">
+                        <label>🎯 View:</label>
+                        <select id="view-mode">
+                            <option value="network">Network Graph</option>
+                            <option value="timeline" disabled>Timeline View (Coming Soon)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="control-item">
+                        <label>🔍 Filter:</label>
+                        <select id="risk-filter">
+                            <option value="all">All Transactions</option>
+                            <option value="low">Low Risk Only</option>
+                            <option value="medium">Medium+ Risk</option>
+                            <option value="high">High Risk Only</option>
+                        </select>
+                    </div>
+                    
+                    <div class="control-item">
+                        <label>💰 Min Amount:</label>
+                        <input type="number" id="amount-filter" placeholder="0.001" step="0.001" min="0">
+                    </div>
+                </div>
+                
                 <div class="legend">
                     <div class="legend-item">
                         <div class="legend-color legend-main"></div>
@@ -312,34 +469,38 @@
                         <span>📉 Money Destination</span>
                     </div>
                     <div class="legend-item">
-                        <div class="legend-line legend-incoming"></div>
-                        <span>+ RECEIVED</span>
+                        <span>🔴 High Risk</span>
                     </div>
                     <div class="legend-item">
-                        <div class="legend-line legend-outgoing"></div>
-                        <span>- SENT</span>
+                        <span>📊 Multiple TX</span>
                     </div>
                 </div>
-                <div id="graph" style="width:100%; height:600px;"></div>
+                
+                <div id="graph" style="width:100%; height:550px;"></div>
             </div>
             
             <div class="details-panel">
                 <div id="details-content">
                     <div class="loading">
-                        <h3>🚀 Bitcoin NET Transaction Explorer</h3>
-                        <p><strong>🎯 NEW: Shows only REAL +/- transactions!</strong></p>
+                        <h3>🚀 Enhanced Bitcoin Explorer</h3>
+                        <p><strong>🆕 NEW FEATURES:</strong></p>
+                        <br>
+                        <p>🔍 <strong>Risk Scoring:</strong> Identifies suspicious transactions</p>
+                        <p>📊 <strong>Pattern Detection:</strong> Categorizes transaction types</p>
+                        <p>⚡ <strong>Performance:</strong> Caching & optimized API calls</p>
+                        <p>🎯 <strong>Advanced Filtering:</strong> Time, amount, risk filters</p>
                         <br>
                         <p><strong>🔍 How to use:</strong></p>
-                        <p>1️⃣ Enter a Bitcoin address to start exploring</p>
-                        <p>2️⃣ See <strong>NET transactions only</strong> (no internal movements)</p>
-                        <p>3️⃣ <strong>Click any address node</strong> to explore its transactions</p>
-                        <p>4️⃣ View actual money flow: <span style="color: #2ecc71; font-weight: bold;">+ RECEIVED</span> and <span style="color: #e74c3c; font-weight: bold;">- SENT</span></p>
+                        <p>1️⃣ Enter Bitcoin address + select time filter</p>
+                        <p>2️⃣ Use "Deep Analysis" for comprehensive insights</p>
+                        <p>3️⃣ Click nodes to explore connected addresses</p>
+                        <p>4️⃣ Monitor risk indicators and transaction patterns</p>
                         <br>
-                        <p>💡 <strong>Perfect for Binance & Exchange addresses:</strong></p>
-                        <p>• Only shows meaningful transactions</p>
-                        <p>• Filters out internal movements and change</p>
-                        <p>• Clear NET amounts on each connection</p>
-                        <p>• Primary source/destination addresses only</p>
+                        <p>💡 <strong>Perfect for:</strong></p>
+                        <p>• Exchange monitoring</p>
+                        <p>• Security analysis</p>
+                        <p>• Fund tracking</p>
+                        <p>• Compliance investigations</p>
                     </div>
                 </div>
             </div>
@@ -348,32 +509,66 @@
 
     <script>
         let currentNodeAddresses = [];
+        let currentTransactions = [];
+        let currentAddress = '';
         
         function exploreAddress() {
             const address = document.getElementById('address-input').value.trim();
+            const timeFilter = document.getElementById('time-filter').value;
+            
             if (!address) {
                 alert('Please enter a Bitcoin address');
                 return;
             }
             
-            loadAddressData(address);
+            currentAddress = address;
+            loadAddressData(address, timeFilter);
         }
         
-        function loadAddressData(address) {
+        function showAdvancedAnalysis() {
+            if (!currentAddress) {
+                alert('Please explore an address first');
+                return;
+            }
+            
+            const btn = document.getElementById('advanced-btn');
+            btn.disabled = true;
+            btn.textContent = 'Analyzing...';
+            
+            // Load additional address information
+            fetch(`/api/address_info/${currentAddress}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        displayAdvancedAnalysis(data.info);
+                    }
+                })
+                .finally(() => {
+                    btn.disabled = false;
+                    btn.textContent = 'Deep Analysis';
+                });
+        }
+        
+        function loadAddressData(address, timeFilter = '') {
             const btn = document.getElementById('explore-btn');
             const detailsContent = document.getElementById('details-content');
             
             btn.disabled = true;
             btn.textContent = 'Loading...';
-            detailsContent.innerHTML = '<div class="loading">Loading transaction data...</div>';
+            detailsContent.innerHTML = '<div class="loading">🔍 Fetching transaction data...</div>';
             
-            fetch(`/api/explore/${address}`)
+            const url = timeFilter ? 
+                `/api/explore/${address}/${timeFilter}` : 
+                `/api/explore/${address}`;
+            
+            fetch(url)
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
                         displayGraph(data.graph, address);
-                        displayTransactionDetails(address, data.transactions);
+                        displayEnhancedTransactionDetails(address, data.transactions, data.address_info);
                         currentNodeAddresses = data.node_addresses;
+                        currentTransactions = data.transactions;
                     } else {
                         detailsContent.innerHTML = `<div class="error">Error: ${data.error}</div>`;
                     }
@@ -395,7 +590,6 @@
                 responsive: true
             });
             
-            // Add click handler for graph nodes
             document.getElementById('graph').on('plotly_click', function(data) {
                 if (data.points && data.points.length > 0) {
                     const pointIndex = data.points[0].pointIndex;
@@ -410,16 +604,14 @@
             });
         }
         
-        function displayTransactionDetails(address, transactions) {
+        function displayEnhancedTransactionDetails(address, transactions, addressInfo) {
             const detailsContent = document.getElementById('details-content');
             
-            // Filter out zero/dust transactions for display
             const meaningfulTxs = transactions.filter(tx => Math.abs(tx.amount_change) > 0.00000001);
             
-            // Calculate totals
-            let totalIncoming = 0;
-            let totalOutgoing = 0;
-            let netChange = 0;
+            let totalIncoming = 0, totalOutgoing = 0, netChange = 0;
+            let riskDistribution = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0};
+            let categoryCount = {};
             
             meaningfulTxs.forEach(tx => {
                 if (tx.amount_change > 0) {
@@ -428,40 +620,83 @@
                     totalOutgoing += Math.abs(tx.amount_change);
                 }
                 netChange += tx.amount_change;
+                riskDistribution[tx.risk_score]++;
+                categoryCount[tx.category] = (categoryCount[tx.category] || 0) + 1;
             });
             
-            const incomingCount = meaningfulTxs.filter(tx => tx.amount_change > 0).length;
-            const outgoingCount = meaningfulTxs.filter(tx => tx.amount_change < 0).length;
+            const balance = addressInfo?.chain_stats?.funded_txo_sum / 100000000 || 0;
+            const totalTxCount = addressInfo?.chain_stats?.tx_count || 0;
             
             let html = `
-                <div class="address-info">
-                    <strong>🎯 Current Address</strong>
-                    ${address}
+                <div class="address-stats">
+                    <strong>🎯 Address Analysis</strong>
+                    <div style="font-family: 'Courier New', monospace; margin: 10px 0; word-break: break-all;">
+                        ${address}
+                    </div>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-value">${balance.toFixed(8)}</div>
+                            <div class="stat-label">Current Balance</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">${totalTxCount}</div>
+                            <div class="stat-label">Total Transactions</div>
+                        </div>
+                    </div>
                 </div>
                 
-                <div class="transaction-summary">
-                    <div class="summary-item">
-                        <div class="summary-value positive">📈 ${incomingCount} RX</div>
-                        <div class="summary-label">+${totalIncoming.toFixed(8)} BTC</div>
+                <div class="quick-stats">
+                    <div class="quick-stat">
+                        <div style="font-size: 1.3em; font-weight: bold; color: #2ecc71;">
+                            📈 ${meaningfulTxs.filter(tx => tx.amount_change > 0).length}
+                        </div>
+                        <div>Incoming (+${totalIncoming.toFixed(8)} BTC)</div>
                     </div>
-                    <div class="summary-item">
-                        <div class="summary-value negative">📉 ${outgoingCount} TX</div>
-                        <div class="summary-label">-${totalOutgoing.toFixed(8)} BTC</div>
+                    <div class="quick-stat">
+                        <div style="font-size: 1.3em; font-weight: bold; color: #e74c3c;">
+                            📉 ${meaningfulTxs.filter(tx => tx.amount_change < 0).length}
+                        </div>
+                        <div>Outgoing (-${totalOutgoing.toFixed(8)} BTC)</div>
                     </div>
                 </div>
                 
-                <div class="recent-transactions">
-                    <h4>💰 NET Transactions (${meaningfulTxs.length})</h4>
-                    <div style="background: #e8f4fd; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 0.9em;">
-                        ℹ️ <strong>Showing only meaningful transactions</strong><br>
-                        Internal movements and dust amounts filtered out
+                <div class="analysis-panel">
+                    <h4>📊 Risk Analysis</h4>
+                    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                        <div style="flex: 1; text-align: center; padding: 10px; background: #e8f5e8; border-radius: 6px;">
+                            <strong>${riskDistribution[0] + riskDistribution[1]}</strong><br>
+                            <span style="color: #2ecc71;">Low Risk</span>
+                        </div>
+                        <div style="flex: 1; text-align: center; padding: 10px; background: #fff3cd; border-radius: 6px;">
+                            <strong>${riskDistribution[2] + riskDistribution[3]}</strong><br>
+                            <span style="color: #f57c00;">Medium Risk</span>
+                        </div>
+                        <div style="flex: 1; text-align: center; padding: 10px; background: #f8d7da; border-radius: 6px;">
+                            <strong>${riskDistribution[4] + riskDistribution[5]}</strong><br>
+                            <span style="color: #d32f2f;">High Risk</span>
+                        </div>
                     </div>
+                </div>
+                
+                <div class="analysis-panel">
+                    <h4>🔍 Transaction Patterns</h4>
+            `;
+            
+            Object.entries(categoryCount).forEach(([category, count]) => {
+                html += `<div class="category-badge category-${category}">${category.replace('_', ' ')}: ${count}</div> `;
+            });
+            
+            html += `
+                </div>
+                
+                <div class="analysis-panel">
+                    <h4>💰 Recent Transactions (${meaningfulTxs.length})</h4>
             `;
             
             if (meaningfulTxs.length > 0) {
-                meaningfulTxs.forEach((tx, index) => {
+                meaningfulTxs.slice(0, 10).forEach(tx => {
                     const isPositive = tx.amount_change > 0;
-                    const cardClass = isPositive ? 'positive' : 'negative';
+                    const cardClass = tx.risk_score > 2 ? 'high-risk' : (isPositive ? 'positive' : 'negative');
                     const amountClass = isPositive ? 'positive' : 'negative';
                     const symbol = isPositive ? '+' : '';
                     const icon = isPositive ? '📈' : '📉';
@@ -469,49 +704,128 @@
                     
                     html += `
                         <div class="transaction-card ${cardClass}">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                                <span>${icon} <strong>${action}</strong></span>
-                                <div class="transaction-amount ${amountClass}">
-                                    ${symbol}${Math.abs(tx.amount_change).toFixed(8)} BTC
+                            <div class="transaction-header">
+                                <div>
+                                    <span>${icon} <strong>${action}</strong></span>
+                                    <div class="transaction-amount ${amountClass}">
+                                        ${symbol}${Math.abs(tx.amount_change).toFixed(8)} BTC
+                                    </div>
+                                </div>
+                                <div class="risk-indicator">
+                    `;
+                    
+                    for (let i = 1; i <= 5; i++) {
+                        html += `<div class="risk-dot ${i <= tx.risk_score ? 'active' : ''}"></div>`;
+                    }
+                    
+                    html += `
                                 </div>
                             </div>
-                            <div class="transaction-time">⏰ ${tx.time}</div>
-                            <div class="transaction-id">🔗 ${tx.txid}</div>
-                            <div style="margin-top: 8px; font-size: 0.9em; color: #666;">
-                                📊 Net effect for your address
+                            
+                            <div class="transaction-meta">
+                                <div>⏰ ${tx.time}</div>
+                                <div>⚡ ${tx.confirmations} confirmations</div>
+                                <div>💸 Fee: ${tx.fee.toFixed(8)} BTC</div>
+                                <div>🏷️ ${tx.category.replace('_', ' ')}</div>
+                            </div>
+                            
+                            <div style="font-family: 'Courier New', monospace; font-size: 0.8em; color: #999; margin-top: 8px;">
+                                🔗 ${tx.txid}
                             </div>
                         </div>
                     `;
                 });
                 
                 html += `
-                    <div style="text-align: center; margin-top: 15px; padding: 15px; background: ${netChange >= 0 ? '#d4edda' : '#f8d7da'}; border-radius: 8px;">
-                        <strong>🏆 TOTAL NET CHANGE: </strong>
-                        <span class="${netChange >= 0 ? 'positive' : 'negative'}" style="font-size: 1.2em; font-weight: bold;">
+                    <div style="text-align: center; margin-top: 20px; padding: 20px; background: ${netChange >= 0 ? '#d4edda' : '#f8d7da'}; border-radius: 10px;">
+                        <strong>🏆 NET CHANGE: </strong>
+                        <span class="${netChange >= 0 ? 'positive' : 'negative'}" style="font-size: 1.4em; font-weight: bold;">
                             ${netChange >= 0 ? '+' : ''}${netChange.toFixed(8)} BTC
                         </span>
                     </div>
                 `;
             } else {
-                html += '<div class="loading">📭 No meaningful transactions found.<br>This address may only have internal movements or dust amounts.</div>';
+                html += '<div class="loading">📭 No meaningful transactions found</div>';
             }
             
             html += '</div>';
-            
             detailsContent.innerHTML = html;
         }
         
-        // Allow Enter key to trigger exploration
+        function displayAdvancedAnalysis(addressInfo) {
+            const detailsContent = document.getElementById('details-content');
+            
+            const chainStats = addressInfo.chain_stats || {};
+            const mempoolStats = addressInfo.mempool_stats || {};
+            
+            const totalReceived = chainStats.funded_txo_sum / 100000000 || 0;
+            const totalSent = chainStats.spent_txo_sum / 100000000 || 0;
+            const currentBalance = (chainStats.funded_txo_sum - chainStats.spent_txo_sum) / 100000000 || 0;
+            const transactionCount = chainStats.tx_count || 0;
+            
+            const additionalAnalysis = `
+                <div class="analysis-panel">
+                    <h4>🏛️ Complete Address Analysis</h4>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin: 20px 0;">
+                        <div style="text-align: center; padding: 15px; background: #e8f5e8; border-radius: 8px;">
+                            <div style="font-size: 1.5em; font-weight: bold; color: #2ecc71;">
+                                ${totalReceived.toFixed(8)}
+                            </div>
+                            <div>Total Received</div>
+                        </div>
+                        
+                        <div style="text-align: center; padding: 15px; background: #ffe8e8; border-radius: 8px;">
+                            <div style="font-size: 1.5em; font-weight: bold; color: #e74c3c;">
+                                ${totalSent.toFixed(8)}
+                            </div>
+                            <div>Total Sent</div>
+                        </div>
+                        
+                        <div style="text-align: center; padding: 15px; background: #e8f4fd; border-radius: 8px;">
+                            <div style="font-size: 1.5em; font-weight: bold; color: #1976d2;">
+                                ${transactionCount}
+                            </div>
+                            <div>Total TX Count</div>
+                        </div>
+                    </div>
+                    
+                    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px; text-align: center;">
+                        <h3 style="margin: 0;">💰 Current Balance</h3>
+                        <div style="font-size: 2em; font-weight: bold; margin: 10px 0;">
+                            ${currentBalance.toFixed(8)} BTC
+                        </div>
+                        <div style="opacity: 0.9;">
+                            ${mempoolStats.tx_count || 0} unconfirmed transactions
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            detailsContent.innerHTML = detailsContent.innerHTML + additionalAnalysis;
+        }
+        
+        // Enhanced keyboard shortcuts
         document.getElementById('address-input').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
-                exploreAddress();
+                if (e.ctrlKey || e.metaKey) {
+                    showAdvancedAnalysis();
+                } else {
+                    exploreAddress();
+                }
             }
         });
         
-        // Set example address on page load
-        // window.addEventListener('load', function() {
-        //     document.getElementById('address-input').value = 'addr';
-        // });
+        // Filter controls
+        document.getElementById('risk-filter').addEventListener('change', function() {
+            // TODO: Implement risk filtering
+            console.log('Risk filter changed:', this.value);
+        });
+        
+        document.getElementById('amount-filter').addEventListener('change', function() {
+            // TODO: Implement amount filtering
+            console.log('Amount filter changed:', this.value);
+        });
     </script>
 </body>
 </html>
