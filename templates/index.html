@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bitcoin Transaction Explorer</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+        
+        .header p {
+            margin: 10px 0 0 0;
+            opacity: 0.9;
+        }
+        
+        .input-section {
+            padding: 30px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .input-group {
+            display: flex;
+            gap: 15px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        #address-input {
+            flex: 1;
+            padding: 15px 20px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        #address-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        #explore-btn {
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        #explore-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        #explore-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .main-content {
+            display: flex;
+            min-height: 600px;
+        }
+        
+        .graph-container {
+            flex: 2;
+            padding: 20px;
+            background: white;
+        }
+        
+        .details-panel {
+            flex: 1;
+            background: #f8f9fa;
+            border-left: 1px solid #e9ecef;
+            padding: 20px;
+            overflow-y: auto;
+            max-height: 800px;
+        }
+        
+        .transaction-card {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            border-left: 4px solid #667eea;
+        }
+        
+        .transaction-card.positive {
+            border-left-color: #2ecc71;
+        }
+        
+        .transaction-card.negative {
+            border-left-color: #e74c3c;
+        }
+        
+        .transaction-amount {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .positive { color: #2ecc71; }
+        .negative { color: #e74c3c; }
+        
+        .transaction-time {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+        
+        .transaction-id {
+            font-family: 'Courier New', monospace;
+            font-size: 0.8em;
+            color: #999;
+            word-break: break-all;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: #666;
+        }
+        
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px;
+            border: 1px solid #fcc;
+        }
+        
+        .current-address {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            word-break: break-all;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .legend {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            background: rgba(248,249,250,0.8);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            padding: 5px 10px;
+            background: white;
+            border-radius: 6px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .legend-color {
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            border: 2px solid white;
+        }
+        
+        .legend-main { background: #ff4757; }
+        .legend-input { background: #2ecc71; }
+        .legend-output { background: #e74c3c; }
+        
+        .legend-line {
+            width: 30px;
+            height: 4px;
+            border-radius: 2px;
+        }
+        
+        .legend-incoming { background: #2ecc71; }
+        .legend-outgoing { background: #e74c3c; }
+        
+        .recent-transactions {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        
+        .recent-transactions h4 {
+            margin: 0 0 15px 0;
+            color: #2c3e50;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .transaction-summary {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .summary-item {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .summary-value {
+            font-size: 1.4em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .summary-label {
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        .address-info {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            word-break: break-all;
+            font-family: 'Courier New', monospace;
+            text-align: center;
+        }
+        
+        .address-info strong {
+            display: block;
+            margin-bottom: 8px;
+            font-family: 'Segoe UI', sans-serif;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔗 Bitcoin Transaction Explorer</h1>
+            <p>Explore Bitcoin addresses and their transaction networks interactively</p>
+        </div>
+        
+        <div class="input-section">
+            <div class="input-group">
+                <input type="text" 
+                       id="address-input" 
+                       placeholder="Enter Bitcoin address"
+                       value="">
+                <button id="explore-btn" onclick="exploreAddress()">Explore</button>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <div class="graph-container">
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color legend-main"></div>
+                        <span>🎯 Your Address</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color legend-input"></div>
+                        <span>📈 Money Source</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color legend-output"></div>
+                        <span>📉 Money Destination</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-line legend-incoming"></div>
+                        <span>+ RECEIVED</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-line legend-outgoing"></div>
+                        <span>- SENT</span>
+                    </div>
+                </div>
+                <div id="graph" style="width:100%; height:600px;"></div>
+            </div>
+            
+            <div class="details-panel">
+                <div id="details-content">
+                    <div class="loading">
+                        <h3>🚀 Bitcoin NET Transaction Explorer</h3>
+                        <p><strong>🎯 NEW: Shows only REAL +/- transactions!</strong></p>
+                        <br>
+                        <p><strong>🔍 How to use:</strong></p>
+                        <p>1️⃣ Enter a Bitcoin address to start exploring</p>
+                        <p>2️⃣ See <strong>NET transactions only</strong> (no internal movements)</p>
+                        <p>3️⃣ <strong>Click any address node</strong> to explore its transactions</p>
+                        <p>4️⃣ View actual money flow: <span style="color: #2ecc71; font-weight: bold;">+ RECEIVED</span> and <span style="color: #e74c3c; font-weight: bold;">- SENT</span></p>
+                        <br>
+                        <p>💡 <strong>Perfect for Binance & Exchange addresses:</strong></p>
+                        <p>• Only shows meaningful transactions</p>
+                        <p>• Filters out internal movements and change</p>
+                        <p>• Clear NET amounts on each connection</p>
+                        <p>• Primary source/destination addresses only</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentNodeAddresses = [];
+        
+        function exploreAddress() {
+            const address = document.getElementById('address-input').value.trim();
+            if (!address) {
+                alert('Please enter a Bitcoin address');
+                return;
+            }
+            
+            loadAddressData(address);
+        }
+        
+        function loadAddressData(address) {
+            const btn = document.getElementById('explore-btn');
+            const detailsContent = document.getElementById('details-content');
+            
+            btn.disabled = true;
+            btn.textContent = 'Loading...';
+            detailsContent.innerHTML = '<div class="loading">Loading transaction data...</div>';
+            
+            fetch(`/api/explore/${address}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        displayGraph(data.graph, address);
+                        displayTransactionDetails(address, data.transactions);
+                        currentNodeAddresses = data.node_addresses;
+                    } else {
+                        detailsContent.innerHTML = `<div class="error">Error: ${data.error}</div>`;
+                    }
+                })
+                .catch(error => {
+                    detailsContent.innerHTML = `<div class="error">Network error: ${error.message}</div>`;
+                })
+                .finally(() => {
+                    btn.disabled = false;
+                    btn.textContent = 'Explore';
+                });
+        }
+        
+        function displayGraph(graphData, address) {
+            const graph = JSON.parse(graphData);
+            
+            Plotly.newPlot('graph', graph.data, graph.layout, {
+                displayModeBar: false,
+                responsive: true
+            });
+            
+            // Add click handler for graph nodes
+            document.getElementById('graph').on('plotly_click', function(data) {
+                if (data.points && data.points.length > 0) {
+                    const pointIndex = data.points[0].pointIndex;
+                    if (pointIndex < currentNodeAddresses.length) {
+                        const clickedAddress = currentNodeAddresses[pointIndex];
+                        if (clickedAddress !== address) {
+                            document.getElementById('address-input').value = clickedAddress;
+                            loadAddressData(clickedAddress);
+                        }
+                    }
+                }
+            });
+        }
+        
+        function displayTransactionDetails(address, transactions) {
+            const detailsContent = document.getElementById('details-content');
+            
+            // Filter out zero/dust transactions for display
+            const meaningfulTxs = transactions.filter(tx => Math.abs(tx.amount_change) > 0.00000001);
+            
+            // Calculate totals
+            let totalIncoming = 0;
+            let totalOutgoing = 0;
+            let netChange = 0;
+            
+            meaningfulTxs.forEach(tx => {
+                if (tx.amount_change > 0) {
+                    totalIncoming += tx.amount_change;
+                } else {
+                    totalOutgoing += Math.abs(tx.amount_change);
+                }
+                netChange += tx.amount_change;
+            });
+            
+            const incomingCount = meaningfulTxs.filter(tx => tx.amount_change > 0).length;
+            const outgoingCount = meaningfulTxs.filter(tx => tx.amount_change < 0).length;
+            
+            let html = `
+                <div class="address-info">
+                    <strong>🎯 Current Address</strong>
+                    ${address}
+                </div>
+                
+                <div class="transaction-summary">
+                    <div class="summary-item">
+                        <div class="summary-value positive">📈 ${incomingCount} RX</div>
+                        <div class="summary-label">+${totalIncoming.toFixed(8)} BTC</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-value negative">📉 ${outgoingCount} TX</div>
+                        <div class="summary-label">-${totalOutgoing.toFixed(8)} BTC</div>
+                    </div>
+                </div>
+                
+                <div class="recent-transactions">
+                    <h4>💰 NET Transactions (${meaningfulTxs.length})</h4>
+                    <div style="background: #e8f4fd; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 0.9em;">
+                        ℹ️ <strong>Showing only meaningful transactions</strong><br>
+                        Internal movements and dust amounts filtered out
+                    </div>
+            `;
+            
+            if (meaningfulTxs.length > 0) {
+                meaningfulTxs.forEach((tx, index) => {
+                    const isPositive = tx.amount_change > 0;
+                    const cardClass = isPositive ? 'positive' : 'negative';
+                    const amountClass = isPositive ? 'positive' : 'negative';
+                    const symbol = isPositive ? '+' : '';
+                    const icon = isPositive ? '📈' : '📉';
+                    const action = isPositive ? 'RECEIVED' : 'SENT';
+                    
+                    html += `
+                        <div class="transaction-card ${cardClass}">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <span>${icon} <strong>${action}</strong></span>
+                                <div class="transaction-amount ${amountClass}">
+                                    ${symbol}${Math.abs(tx.amount_change).toFixed(8)} BTC
+                                </div>
+                            </div>
+                            <div class="transaction-time">⏰ ${tx.time}</div>
+                            <div class="transaction-id">🔗 ${tx.txid}</div>
+                            <div style="margin-top: 8px; font-size: 0.9em; color: #666;">
+                                📊 Net effect for your address
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                html += `
+                    <div style="text-align: center; margin-top: 15px; padding: 15px; background: ${netChange >= 0 ? '#d4edda' : '#f8d7da'}; border-radius: 8px;">
+                        <strong>🏆 TOTAL NET CHANGE: </strong>
+                        <span class="${netChange >= 0 ? 'positive' : 'negative'}" style="font-size: 1.2em; font-weight: bold;">
+                            ${netChange >= 0 ? '+' : ''}${netChange.toFixed(8)} BTC
+                        </span>
+                    </div>
+                `;
+            } else {
+                html += '<div class="loading">📭 No meaningful transactions found.<br>This address may only have internal movements or dust amounts.</div>';
+            }
+            
+            html += '</div>';
+            
+            detailsContent.innerHTML = html;
+        }
+        
+        // Allow Enter key to trigger exploration
+        document.getElementById('address-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                exploreAddress();
+            }
+        });
+        
+        // Set example address on page load
+        // window.addEventListener('load', function() {
+        //     document.getElementById('address-input').value = 'addr';
+        // });
+    </script>
+</body>
+</html>
